@@ -7,10 +7,11 @@ var path             = require('path');
 var os               = require('os');
 var username         = require('username');
 var lodash           = require('lodash');
+var Rsync            = require('rsync');
 var sshClient        = require('./lib/ssh-client');
 
 module.exports = {
-  name: 'ember-cli-deploy-ssh2',
+  name: 'ember-cli-deploy-with-rsync',
 
   createDeployPlugin: function(options) {
     var DeployPlugin = DeployPluginBase.extend({
@@ -25,9 +26,10 @@ module.exports = {
         username: '',
         password: null,
         privateKeyPath: '~/.ssh/id_rsa',
+        rsyncFlags: 'rtvu',
         agent: null,
         port: 22,
-        applicationFiles: ['index.html'],
+        directory: 'tmp/deploy-dist/.',
 
         root: function(context) {
           return path.posix.join('/usr/local/www', context.project.name());
@@ -103,7 +105,7 @@ module.exports = {
 
         this.log('Activating revision ' + revisionKey);
 
-        if (activationStrategy === "copy") {
+        if (activationStrategy === 'copy') {
           linkCmd = 'cp -TR ' + activeRevisionPath + ' ' + activationDestination;
         } else {
           linkCmd = 'ln -fsn ' + activeRevisionPath + ' ' + activationDestination;
@@ -133,7 +135,7 @@ module.exports = {
             context.revisions = manifest;
           },
           function(error) {
-            _this.log(error, {color: 'red'});
+            _this.log(error, { color: 'red' });
           }
         );
       },
@@ -143,12 +145,12 @@ module.exports = {
 
         return this._updateRevisionManifest().then(
           function() {
-            _this.log('Successfully uploaded updated manifest.', {verbose: true});
+            _this.log('Successfully uploaded updated manifest.', { verbose: true });
 
             return _this._uploadApplicationFiles();
           },
           function(error) {
-            _this.log(error, {color: "red"});
+            _this.log(error, { color: 'red' });
           }
         );
       },
@@ -159,37 +161,17 @@ module.exports = {
 
       _uploadApplicationFiles: function(/*context*/) {
         var client = this._client;
-        var files = this.readConfig('applicationFiles');
         var distDir = this.readConfig('distDir');
         var revisionKey = this.readConfig('revisionKey');
         var uploadDestination = this.readConfig('uploadDestination');
         var destination = path.posix.join(uploadDestination, revisionKey);
+        var generatedPath = this.readConfig('username') + '@' + this.readConfig('host') + ':' + destination;
         var _this = this;
 
         this.log('Uploading `applicationFiles` to ' + destination);
 
-        var uploading = new Promise(function(resolve, reject) {
-          var promises = [];
-          files.forEach(function(file) {
-            var src = path.join(distDir, file);
-            var dest = path.posix.join(destination, file);
-
-            promises.push(client.putFile(src, dest, _this));
-          });
-
-          Promise.all(promises).then(resolve, reject);
-        });
-
-        uploading.then(
-          function() {
-            _this.log('Successfully uploaded file/s.', { color: 'green' });
-          },
-          function() {
-            _this.log('Failed to upload file/s.', { color: 'red' });
-          }
-        );
-
-        return uploading;
+        client.exec('mkdir -p ' + destination);
+        this._rsync(generatedPath);
       },
 
       _activateRevisionManifest: function(/*context*/) {
@@ -211,12 +193,12 @@ module.exports = {
                 return rev;
               });
 
-              var data = new Buffer(JSON.stringify(manifest), "utf-8");
+              var data = new Buffer(JSON.stringify(manifest), 'utf-8');
 
               client.upload(manifestPath, data, _this).then(resolve, reject);
             },
             function(error) {
-              _this.log(error, {color: 'red'});
+              _this.log(error, { color: 'red' });
               reject(error);
             }
           );
@@ -230,7 +212,7 @@ module.exports = {
         var client       = this._client;
         var _this        = this;
 
-        this.log('Updating `revisionManifest` ' + manifestPath, {verbose: true});
+        this.log('Updating `revisionManifest` ' + manifestPath, { verbose: true });
 
         return new Promise(function(resolve, reject) {
           _this._fetchRevisionManifest().then(
@@ -240,21 +222,21 @@ module.exports = {
               });
 
               if (existing) {
-                _this.log('Revision ' + revisionKey + ' already added to `revisionManifest` moving on.', {verbose: true});
+                _this.log('Revision ' + revisionKey + ' already added to `revisionManifest` moving on.', { verbose: true });
                 resolve();
                 return;
               }
 
-              _this.log('Adding ' + JSON.stringify(revisionMeta), {verbose: true});
+              _this.log('Adding ' + JSON.stringify(revisionMeta), { verbose: true });
 
               manifest.unshift(revisionMeta);
 
-              var data = new Buffer(JSON.stringify(manifest), "utf-8");
+              var data = new Buffer(JSON.stringify(manifest), 'utf-8');
 
               client.upload(manifestPath, data).then(resolve, reject);
             },
             function(error) {
-              _this.log(error.message, {color: 'red'});
+              _this.log(error.message, { color: 'red' });
               reject(error);
             }
           );
@@ -269,23 +251,44 @@ module.exports = {
         return new Promise(function(resolve, reject) {
           client.readFile(manifestPath).then(
             function(manifest) {
-              _this.log('fetched manifest ' + manifestPath, {verbose: true});
+              _this.log('fetched manifest ' + manifestPath, { verbose: true });
 
               resolve(JSON.parse(manifest));
             },
             function(error) {
-              if (error.message === "No such file") {
-                _this.log('Revision manifest not present building new one.', {verbose: true});
+              if (error.message === 'No such file') {
+                _this.log('Revision manifest not present building new one.', { verbose: true });
 
-                resolve([]);
+                resolve([ ]);
               } else {
-                _this.log(error.message, {color: 'red'});
+                _this.log(error.message, { color: 'red' });
                 reject(error);
               }
             }
           );
         });
-      }
+      },
+
+      _rsync: function (destination) {
+         var _this = this;
+         var rsync = new Rsync()
+           .shell('ssh -p ' + this.readConfig('port'))
+           .flags(this.readConfig('rsyncFlags'))
+           .source(this.readConfig('directory'))
+           .destination(destination);
+
+         if (this.readConfig('exclude')){
+           rsync.set('exclude', this.readConfig('exclude'));
+         }
+
+         if (this.readConfig('displayCommands')){
+           this.log(rsync.command());
+         }
+
+         rsync.execute(function(error, code, cmd) {
+           _this.log('Done !');
+         });
+       },
     });
 
     return new DeployPlugin();

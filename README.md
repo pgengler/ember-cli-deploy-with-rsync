@@ -1,13 +1,13 @@
-# ember-cli-deploy-ssh2 [![Build Status](https://travis-ci.org/arenoir/ember-cli-deploy-ssh2.svg?branch=master)](https://travis-ci.org/arenoir/ember-cli-deploy-ssh2)
+# ember-cli-deploy-with-rsync [![CircleCI](https://circleci.com/gh/pgengler/ember-cli-deploy-with-rsync.svg?style=svg)](https://circleci.com/gh/pgengler/ember-cli-deploy-with-rsync)
 
-> An ember-cli-deploy plugin to upload activate and list versioned application file/s using ssh.
+> An ember-cli-deploy plugin to upload, activate and list versioned application file/s using rsync and SSH.
 
 <hr/>
 **WARNING: This plugin is only compatible with ember-cli-deploy versions >= 0.5.0**
 <hr/>
 
 
-This plugin uploads, activates and lists deployed revisions. It is different from other plugins as it works with multiple `applicationFiles`. The primary use case is being able to keep the `index.html` and `manifest.appcache` files versioned and activated together. 
+This plugin uploads, activates and lists deployed revisions. It's mainly based on [ember-cli-deploy-ssh2](https://github.com/arenoir/ember-cli-deploy-ssh2) with some elements from [ember-cli-deploy-scp](https://github.com/michaljach/ember-cli-deploy-scp). The main difference from `ember-cli-deploy-ssh2` is that this plugin will copy all files from the build, rather than just a set of named files.
 
 
 ## Quick Start
@@ -18,19 +18,18 @@ To get up and running quickly, do the following:
 - Install this plugin
 
 ```bash
-$ ember install ember-cli-deploy-ssh2
+$ ember install ember-cli-deploy-with-rsync
 ```
 
 - Place the following configuration into `config/deploy.js`
 
 ```javascript
-ENV['ssh2'] = {
+ENV['with-rsync'] = {
   host: 'webserver1.example.com',
   username: 'production-deployer',
-  privateKeyPath: '~/.ssh/id_rsa',
-  port: 22,
-  applicationFiles: ['index.html', 'manifest.appcache'],
-  root: '/usr/local/www/my-application'
+  privateKeyPath: '~/.ssh/id_rsa', // optional
+  port: 22, // optional
+  root: '/usr/local/www/my-application' // optional
 }
 ```
 
@@ -43,13 +42,13 @@ $ ember deploy
 ## Configuration Options
 
 ### host
-  The host name or ip address of the machine to connet to.
+  The host name or IP address of the machine to connect to.
 
 *Default:* `''`
 
 ### username
 
-  The username to use to open a ssh connection.
+  The username to use to open an SSH connection.
 
 *Default:* `''`
 
@@ -64,16 +63,11 @@ $ ember deploy
   The passphrase used to decrypt the privateKey.
 
 *Default:*  ```none```
-  
+
 ### port
-  The port to connect on. 
+  The port to connect on.
 
 *Default:* ```'22'```
-
-### applicationFiles
-  A list of files to upload to the server. 
-
-*Default:* ```['index.html']```
 
 ### root
 
@@ -87,7 +81,7 @@ $ ember deploy
 
   A string or a function returning the path where the application files are stored.
 
-*Default:* 
+*Default:*
 ```
 function(context){
   return path.join(this.readConfig('root'), 'revisions');
@@ -96,9 +90,9 @@ function(context){
 
 ### activationDestination
 
-  The path that the active version should be linked to. 
+  The path that the active version should be linked to.
 
-*Default:* 
+*Default:*
 ```
 function(context) {
   return path.join(this.readConfig('root'), 'active');
@@ -106,17 +100,17 @@ function(context) {
 ```
 
 ### activationStrategy
-  
+
   How revisions are activated either by symlink or copying revision directory.
 
 *Default:* ```"symlink"```
 
 
 ### revisionManifest
-  
+
   A string or a function returning the path where the revision manifest is located.
 
-*Default:* 
+*Default:*
 ```
 function(context) {
   return path.join(this.readConfig('root'), 'revisions.json');
@@ -126,12 +120,12 @@ function(context) {
 ### revisionMeta
   A function returning a hash of meta data to include with the revision.
 
-*Default:* 
+*Default:*
 ```
 function(context) {
   var revisionKey = this.readConfig('revisionKey');
   var who = username.sync() + '@' + os.hostname();
-          
+
   return {
     revision: revisionKey,
     deployer: who,
