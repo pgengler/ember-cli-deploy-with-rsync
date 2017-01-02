@@ -6,7 +6,6 @@ var DeployPluginBase = require('ember-cli-deploy-plugin');
 var path             = require('path');
 var os               = require('os');
 var username         = require('username');
-var lodash           = require('lodash');
 var Rsync            = require('rsync');
 var sshClient        = require('./lib/ssh-client');
 
@@ -43,7 +42,7 @@ module.exports = {
 
         activationStrategy: 'symlink',
 
-        uploadDestination: function(/*context*/){
+        uploadDestination: function(/*context*/) {
           var root = this.readConfig('root');
 
           return path.posix.join(root, 'revisions');
@@ -168,8 +167,7 @@ module.exports = {
 
         this.log('Uploading `applicationFiles` to ' + destination);
 
-        client.exec('mkdir -p ' + destination);
-        this._rsync(generatedPath);
+        client.exec('mkdir -p ' + destination).then(() => this._rsync(generatedPath));
       },
 
       _activateRevisionManifest: function(/*context*/) {
@@ -182,7 +180,7 @@ module.exports = {
         return new Promise(function(resolve, reject) {
           fetching.then(
             function(manifest) {
-              manifest = lodash.map(manifest, function(rev) {
+              manifest.forEach((rev) => {
                 if (rev.revision = revisionKey) {
                   rev.active = true;
                 } else {
