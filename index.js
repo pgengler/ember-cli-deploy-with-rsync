@@ -161,12 +161,10 @@ module.exports = {
 
       _uploadApplicationFiles: function(/*context*/) {
         var client = this._client;
-        var distDir = this.readConfig('distDir');
         var revisionKey = this.readConfig('revisionKey');
         var uploadDestination = this.readConfig('uploadDestination');
         var destination = path.posix.join(uploadDestination, revisionKey);
         var generatedPath = this.readConfig('username') + '@' + this.readConfig('host') + ':' + destination;
-        var _this = this;
 
         this.log('Uploading `applicationFiles` to ' + destination);
 
@@ -277,15 +275,15 @@ module.exports = {
            .source(this.readConfig('directory'))
            .destination(destination);
 
-         if (this.readConfig('exclude')){
+         if (this.readConfig('exclude')) {
            rsync.set('exclude', this.readConfig('exclude'));
          }
 
-         if (this.readConfig('displayCommands')){
+         if (this.readConfig('displayCommands')) {
            this.log(rsync.command());
          }
 
-         rsync.execute(function(error, code, cmd) {
+         rsync.execute(function() {
            _this.log('Done !');
          });
        },
