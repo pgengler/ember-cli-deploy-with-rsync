@@ -76,13 +76,13 @@ describe('the deploy plugin object', function() {
     var subject = require('../../index');
 
     plugin = subject.createDeployPlugin({
-      name: 'with-rsync',
+      name: 'with-rsync'
     });
 
     context = {
       ui: {write: function() {}, writeLine: function() {}},
       config: {
-        'ssh2': {
+        'with-rsync': {
           username: 'deployer',
           password: 'mypass',
           root: '/usr/local/www/my-app',
@@ -179,7 +179,7 @@ describe('the deploy plugin object', function() {
     });
 
     it('copies revision to activationDestination if activationStrategy is copy', function() {
-      context.config.ssh2.activationStrategy = 'copy';
+      context.config['with-rsync'].activationStrategy = 'copy';
       plugin.configure(context);
 
       var activating = plugin.activate(context);
