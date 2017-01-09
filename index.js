@@ -106,37 +106,26 @@ class DeployPlugin extends DeployPluginBase {
       linkCmd = 'ln -fsn ' + activeRevisionPath + ' ' + activationDestination;
     }
 
-    return new Promise((resolve, reject) => {
-      client.exec(linkCmd).then(
-        () => {
-          this._activateRevisionManifest().then(
-            resolve(revisionData),
-            reject
-          );
-        },
-        reject
-      );
-    });
+    return client.exec(linkCmd)
+      .then(() => this._activateRevisionManifest())
+      .then(() => revisionData);
   }
 
   fetchRevisions(context) {
     this.log('Fetching Revisions');
 
-    return this._fetchRevisionManifest().then(
-      (manifest) => context.revisions = manifest,
-      (error) => this.log(error, { color: 'red' })
-    );
+    return this._fetchRevisionManifest()
+      .then((manifest) => context.revisions = manifest)
+      .catch((error) => this.log(error, { color: 'red' }));
   }
 
   upload(/*context*/) {
-    return this._updateRevisionManifest().then(
-      () => {
+    return this._updateRevisionManifest()
+      .then(() => {
         this.log('Successfully uploaded updated manifest.', { verbose: true });
-
         return this._uploadApplicationFiles();
-      },
-      (error) => this.log(error, { color: 'red' })
-    );
+      })
+      .catch((error) => this.log(error, { color: 'red' }));
   }
 
   teardown(/*context*/) {
@@ -152,37 +141,34 @@ class DeployPlugin extends DeployPluginBase {
 
     this.log('Uploading `applicationFiles` to ' + destination);
 
-    client.exec('mkdir -p ' + destination).then(() => this._rsync(generatedPath));
+    return client.exec('mkdir -p ' + destination)
+      .then(() => this._rsync(generatedPath));
   }
 
   _activateRevisionManifest(/*context*/) {
     let client = this._client;
     let revisionKey = this.readConfig('revisionKey');
-    let fetching = this._fetchRevisionManifest();
     let manifestPath = this.readConfig('revisionManifest');
 
-    return new Promise((resolve, reject) => {
-      fetching.then(
-        (manifest) => {
-          manifest.forEach((rev) => {
-            if (rev.revision = revisionKey) {
-              rev.active = true;
-            } else {
-              delete rev['active'];
-            }
-            return rev;
-          });
+    return this._fetchRevisionManifest()
+      .then((manifest) => {
+        manifest.forEach((rev) => {
+          if (rev.revision = revisionKey) {
+            rev.active = true;
+          } else {
+            delete rev['active'];
+          }
+          return rev;
+        });
 
-          let data = new Buffer(JSON.stringify(manifest), 'utf-8');
+        let data = new Buffer(JSON.stringify(manifest), 'utf-8');
 
-          client.upload(manifestPath, data, this).then(resolve, reject);
-        },
-        (error) => {
-          this.log(error, { color: 'red' });
-          reject(error);
-        }
-      );
-    });
+        return client.upload(manifestPath, data, this);
+      })
+      .catch((error) => {
+        this.log(error, { color: 'red' });
+        return error;
+      });
   }
 
   _updateRevisionManifest() {
@@ -193,75 +179,63 @@ class DeployPlugin extends DeployPluginBase {
 
     this.log('Updating `revisionManifest` ' + manifestPath, { verbose: true });
 
-    return new Promise((resolve, reject) => {
-      this._fetchRevisionManifest().then(
-        (manifest) => {
-          let existing = manifest.some((rev) => rev.revision === revisionKey);
+    return this._fetchRevisionManifest()
+      .then((manifest) => {
+        let existing = manifest.some((rev) => rev.revision === revisionKey);
 
-          if (existing) {
-            this.log('Revision ' + revisionKey + ' already added to `revisionManifest` moving on.', { verbose: true });
-            resolve();
-            return;
-          }
-
-          this.log('Adding ' + JSON.stringify(revisionMeta), { verbose: true });
-
-          manifest.unshift(revisionMeta);
-
-          let data = new Buffer(JSON.stringify(manifest), 'utf-8');
-
-          client.upload(manifestPath, data).then(resolve, reject);
-        },
-        (error) => {
-          this.log(error.message, { color: 'red' });
-          reject(error);
+        if (existing) {
+          this.log('Revision ' + revisionKey + ' already added to `revisionManifest` moving on.', { verbose: true });
+          return;
         }
-      );
-    });
+        this.log('Adding ' + JSON.stringify(revisionMeta), { verbose: true });
+        manifest.unshift(revisionMeta);
+
+        let data = new Buffer(JSON.stringify(manifest), 'utf-8');
+        return client.upload(manifestPath, data);
+      })
+      .catch((error) => {
+        this.log(error.message, { color: 'red' });
+        return error;
+      });
   }
 
   _fetchRevisionManifest() {
     let manifestPath = this.readConfig('revisionManifest');
     let client = this._client;
 
-    return new Promise((resolve, reject) => {
-      client.readFile(manifestPath).then(
-        (manifest) => {
-          this.log('fetched manifest ' + manifestPath, { verbose: true });
+    return client.readFile(manifestPath)
+      .then((manifest) => {
+        this.log('fetched manifest ' + manifestPath, { verbose: true });
+        return JSON.parse(manifest);
+      })
+      .catch((error) => {
+        if (error.message === 'No such file') {
+          this.log('Revision manifest not present building new one.', { verbose: true });
 
-          resolve(JSON.parse(manifest));
-        },
-        (error) => {
-          if (error.message === 'No such file') {
-            this.log('Revision manifest not present building new one.', { verbose: true });
-
-            resolve([ ]);
-          } else {
-            this.log(error.message, { color: 'red' });
-            reject(error);
-          }
+          return Promise.resolve([ ]);
+        } else {
+          this.log(error.message, { color: 'red' });
         }
-      );
-    });
+      });
   }
 
   _rsync(destination) {
-   let rsync = new Rsync()
-     .shell('ssh -p ' + this.readConfig('port'))
-     .flags(this.readConfig('rsyncFlags'))
-     .source(this.readConfig('directory'))
-     .destination(destination);
+    let rsync = new Rsync()
+      .shell('ssh -p ' + this.readConfig('port'))
+      .flags(this.readConfig('rsyncFlags'))
+      .source(this.readConfig('directory'))
+      .destination(destination);
 
-   if (this.readConfig('exclude')) {
-     rsync.set('exclude', this.readConfig('exclude'));
-   }
+    if (this.readConfig('exclude')) {
+      rsync.set('exclude', this.readConfig('exclude'));
+    }
 
-   if (this.readConfig('displayCommands')) {
-     this.log(rsync.command());
-   }
+    if (this.readConfig('displayCommands')) {
+      this.log(rsync.command());
+    }
 
-   rsync.execute(() => this.log('Done !'));
- }
+    rsync.execute(() => this.log('Done !'));
+  }
 }
 
 module.exports = {
