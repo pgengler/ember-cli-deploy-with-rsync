@@ -11,9 +11,9 @@
   },
   "repository": "https://github.com/pgengler/ember-cli-deploy-with-rsync",
   "engines": {
-    "node": ">= 0.10.0"
+    "node": ">= 6.0.0"
   },
-  "author": "Aaron Renoir",
+  "author": "Phil Gengler",
   "license": "MIT",
   "devDependencies": {
     "broccoli-asset-rev": "^2.2.0",
