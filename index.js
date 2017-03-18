@@ -77,7 +77,7 @@ class DeployPlugin extends DeployPluginBase {
       port: this.readConfig('port'),
       privateKeyPath: this.readConfig('privateKeyPath'),
       passphrase: this.readConfig('passphrase'),
-      agent: this.readConfig('agent')
+      agent: this.readConfig('agent') || process.env['SSH_AUTH_SOCK']
     };
 
     this._client = new SSHClient(options);
