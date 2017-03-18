@@ -65,6 +65,7 @@ class DeployPlugin extends DeployPluginBase {
     super();
     this.name = options.name;
     this.defaultConfig = defaultConfig;
+    this._sshClient = SSHClient;
   }
 
   configure(context) {
@@ -80,7 +81,7 @@ class DeployPlugin extends DeployPluginBase {
       agent: this.readConfig('agent') || process.env['SSH_AUTH_SOCK']
     };
 
-    this._client = new SSHClient(options);
+    this._client = new this._sshClient(options);
     return this._client.connect(this);
   }
 
