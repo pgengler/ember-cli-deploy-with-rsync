@@ -1,7 +1,13 @@
+/* eslint-env node, mocha */
 'use strict';
 
-const fs     = require('node-fs');
-const assert = require('ember-cli/tests/helpers/assert');
+const fs   = require('node-fs');
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+const RSVP = require('rsvp');
+
+chai.use(chaiAsPromised);
+const assert = chai.assert;
 
 class MockSSHClient {
   constructor(options) {
@@ -11,11 +17,11 @@ class MockSSHClient {
 
   connect() {
     this._connected = true;
-    return Promise.resolve();
+    return RSVP.resolve();
   }
 
   readFile(path) {
-    return new Promise((resolve, reject) => {
+    return new RSVP.Promise((resolve, reject) => {
       if (this._readFileError) {
         reject(this._readFileError);
       } else {
@@ -26,14 +32,14 @@ class MockSSHClient {
   }
 
   upload(path, data) {
-    return new Promise((resolve) => {
+    return new RSVP.Promise((resolve) => {
       this._uploadedFiles[path] = data.toString();
       resolve();
     });
   }
 
   putFile(src, dest) {
-    return new Promise((resolve) => {
+    return new RSVP.Promise((resolve) => {
       let file = fs.readFileSync(src, 'utc8');
       this._uploadedFiles[dest] = file.toString();
       resolve();
@@ -41,7 +47,7 @@ class MockSSHClient {
   }
 
   exec(command) {
-    return new Promise((resolve) => {
+    return new RSVP.Promise((resolve) => {
       this._command = command;
       resolve();
     });

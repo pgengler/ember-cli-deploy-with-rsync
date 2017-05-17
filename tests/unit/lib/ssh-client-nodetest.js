@@ -1,8 +1,10 @@
+/* eslint-env node, mocha */
 'use strict';
 
-const assert    = require('ember-cli/tests/helpers/assert');
-//var chai      = require('chai');
-//var lodash    = require('lodash');
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+chai.use(chaiAsPromised);
+const assert = chai.assert;
 const Client = require('../../../lib/ssh-client');
 
 

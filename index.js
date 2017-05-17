@@ -1,11 +1,11 @@
-/* jshint node: true */
+/* eslint-env node */
 'use strict';
 
-const Promise          = require('ember-cli/lib/ext/promise');
 const DeployPluginBase = require('ember-cli-deploy-plugin');
 const path             = require('path');
 const os               = require('os');
 const username         = require('username');
+const RSVP             = require('rsvp');
 const Rsync            = require('rsync');
 const SSHClient        = require('./lib/ssh-client');
 
@@ -154,7 +154,7 @@ class DeployPlugin extends DeployPluginBase {
     return this._fetchRevisionManifest()
       .then((manifest) => {
         manifest.forEach((rev) => {
-          if (rev.revision = revisionKey) {
+          if (rev.revision == revisionKey) {
             rev.active = true;
           } else {
             delete rev['active'];
@@ -213,7 +213,7 @@ class DeployPlugin extends DeployPluginBase {
         if (error.message === 'No such file') {
           this.log('Revision manifest not present building new one.', { verbose: true });
 
-          return Promise.resolve([ ]);
+          return RSVP.resolve([ ]);
         } else {
           this.log(error.message, { color: 'red' });
         }

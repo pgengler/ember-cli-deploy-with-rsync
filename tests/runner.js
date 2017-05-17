@@ -1,3 +1,4 @@
+/* eslint-env node */
 'use strict';
 
 var glob   = require('glob');
@@ -15,7 +16,7 @@ function addFiles(mocha, files) {
   glob.sync(root + files).forEach(mocha.addFile.bind(mocha));
 }
 
-addFiles(mocha, 'jshint.spec.js');
+addFiles(mocha, 'eslint.spec.js');
 
 
 addFiles(mocha, '/**/*-nodetest.js');
