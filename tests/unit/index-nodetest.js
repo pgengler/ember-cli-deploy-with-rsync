@@ -74,8 +74,8 @@ describe('the deploy plugin object', function() {
           password: 'mypass',
           root: '/usr/local/www/my-app',
           distDir: 'tests/fixtures/dist',
-          revisionMeta() {
-            let revisionKey = this.readConfig('revisionKey');
+          revisionMeta(context, pluginHelper) {
+            let revisionKey = pluginHelper.readConfig('revisionKey');
 
             return {
               revision: revisionKey,

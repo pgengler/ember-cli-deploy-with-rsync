@@ -24,22 +24,22 @@ const defaultConfig = {
     return path.posix.join('/usr/local/www', context.project.name());
   },
 
-  activationDestination(/*context*/) {
-    let root = this.readConfig('root');
+  activationDestination(context, pluginHelper) {
+    let root = pluginHelper.readConfig('root');
 
     return path.posix.join(root, 'active');
   },
 
   activationStrategy: 'symlink',
 
-  uploadDestination(/*context*/) {
-    let root = this.readConfig('root');
+  uploadDestination(context, pluginHelper) {
+    let root = pluginHelper.readConfig('root');
 
     return path.posix.join(root, 'revisions');
   },
 
-  revisionManifest(/*context*/) {
-    let root = this.readConfig('root');
+  revisionManifest(context, pluginHelper) {
+    let root = pluginHelper.readConfig('root');
 
     return path.posix.join(root, 'revisions.json');
   },
@@ -48,8 +48,8 @@ const defaultConfig = {
     return (context.commandOptions && context.commandOptions.revision) || (context.revisionData && context.revisionData.revisionKey);
   },
 
-  revisionMeta(/*context*/) {
-    let revisionKey = this.readConfig('revisionKey');
+  revisionMeta(context, pluginHelper) {
+    let revisionKey = pluginHelper.readConfig('revisionKey');
     let who = username.sync() + '@' + os.hostname();
 
     return {
