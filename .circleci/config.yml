@@ -8,7 +8,7 @@ jobs:
       - checkout
       - restore_cache:
           key: v1-yarn-{{ checksum "yarn.lock" }}
-      - run: yarn
+      - run: yarn --ignore-engines
       - save_cache:
           key: v1-yarn-{{ checksum "yarn.lock" }}
           paths:
