@@ -235,7 +235,21 @@ class DeployPlugin extends DeployPluginBase {
       this.log(rsync.command());
     }
 
-    rsync.execute(() => this.log('Done !'));
+    return new RSVP.Promise((resolve, reject) => {
+      rsync.execute((error, code, cmd) => {
+        if (!error) {
+          this.log('Done!');
+          return resolve();
+        }
+
+        let errorMessage = [
+          `rsync failed with code ${code}`,
+          `command was: ${cmd}`,
+          error.message
+        ].join("\n");
+        reject(errorMessage);
+      });
+    });
   }
 }
 
