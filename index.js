@@ -143,7 +143,8 @@ class DeployPlugin extends BasePlugin {
     this.log('Uploading `applicationFiles` to ' + destination);
 
     return client.exec('mkdir -p ' + destination)
-      .then(() => this._rsync(generatedPath));
+      .then(() => this._rsync(generatedPath))
+      .then(() => this.log('Finished uploading application files!'));
   }
 
   _activateRevisionManifest(/*context*/) {
@@ -228,18 +229,11 @@ class DeployPlugin extends BasePlugin {
     }
 
     return new RSVP.Promise((resolve, reject) => {
-      rsync.execute((error, code, cmd) => {
-        if (!error) {
-          this.log('Done!');
-          return resolve();
+      rsync.execute((error/*, code, cmd*/) => {
+        if (error) {
+          reject(error);
         }
-
-        let errorMessage = [
-          `rsync failed with code ${code}`,
-          `command was: ${cmd}`,
-          error.message
-        ].join("\n");
-        reject(errorMessage);
+        return resolve();
       });
     });
   }
