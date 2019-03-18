@@ -21,36 +21,68 @@ class MockSSHClient {
   }
 
   readFile(path) {
-    return new RSVP.Promise((resolve, reject) => {
-      if (this._readFileError) {
-        reject(this._readFileError);
+    if (this._readFileError) {
+      return RSVP.reject(this._readFileError);
+    } else {
+      let file = this._uploadedFiles[path];
+      if (file) {
+        return RSVP.resolve(file);
       } else {
-        let file = this._uploadedFiles[path];
-        resolve(file);
+        return RSVP.reject(new Error('No such file'));
       }
-    });
+    }
   }
 
   upload(path, data) {
-    return new RSVP.Promise((resolve) => {
-      this._uploadedFiles[path] = data.toString();
-      resolve();
-    });
+    this._uploadedFiles[path] = data.toString();
+    return RSVP.resolve();
   }
 
   putFile(src, dest) {
-    return new RSVP.Promise((resolve) => {
-      let file = fs.readFileSync(src, 'utc8');
-      this._uploadedFiles[dest] = file.toString();
-      resolve();
-    });
+    let file = fs.readFileSync(src, 'utc8');
+    this._uploadedFiles[dest] = file.toString();
+    return RSVP.resolve();
   }
 
   exec(command) {
-    return new RSVP.Promise((resolve) => {
-      this._command = command;
-      resolve();
-    });
+    this._command = command;
+    return RSVP.resolve();
+  }
+}
+
+class MockRsyncClient {
+  constructor() {
+    this._destinationArgs = null;
+    this._flagsArgs = null;
+    this._shellArgs = null;
+    this._sourceArgs = null;
+  }
+
+  destination() {
+    this._destinationArgs = arguments;
+    return this;
+  }
+
+  execute(callback) {
+    if (this._executeShouldFail) {
+      callback(new Error("failed"));
+    }
+    callback();
+  }
+
+  flags() {
+    this._flagsArgs = arguments;
+    return this;
+  }
+
+  shell() {
+    this._shellArgs = arguments;
+    return this;
+  }
+
+  source() {
+    this._sourceArgs = arguments;
+    return this;
   }
 }
 
@@ -89,6 +121,7 @@ describe('the deploy plugin object', function() {
     };
 
     plugin._sshClient = MockSSHClient;
+    plugin._rsyncClientClass = MockRsyncClient;
 
     plugin.beforeHook(context);
     configure = plugin.configure(context);
@@ -159,6 +192,7 @@ describe('the deploy plugin object', function() {
     it('creates a symbolic link to active version', function() {
       let activating = plugin.activate(context);
       let client = plugin._client;
+      // client._readFileError = new Error('No such file');
 
       return assert.isFulfilled(activating).then(function() {
         assert.equal(client._command, 'ln -fsn /usr/local/www/my-app/revisions/89b1d82820a24bfb075c5b43b36f454b/ /usr/local/www/my-app/active');
@@ -201,6 +235,7 @@ describe('the deploy plugin object', function() {
       files[manifestPath] = JSON.stringify(revisions);
 
       client._uploadedFiles = files;
+      plugin._uploadApplicationFiles = RSVP.resolve;
 
       let uploading = plugin.upload(context);
 
@@ -210,6 +245,27 @@ describe('the deploy plugin object', function() {
         assert.equal(JSON.stringify(revisions), manifest);
       });
     });
+
+    it('returns a rejected promise when rsync fails', function() {
+      plugin._rsync = RSVP.reject();
+      let uploading = plugin.upload();
+
+      return assert.isRejected(uploading);
+    });
   });
 
+  describe('_rsync', function() {
+    it('returns a resolved promise when rsync succeeds', function() {
+      let promise = plugin._rsync();
+
+      return assert.isFulfilled(promise);
+    });
+
+    it('returns a rejected promise when rsync fails', function() {
+      plugin._rsyncClient._executeShouldFail = true;
+      let promise = plugin._rsync();
+
+      return assert.isRejected(promise);
+    });
+  });
 });

@@ -1,13 +1,13 @@
 /* eslint-env node */
 'use strict';
 
-const DeployPluginBase = require('ember-cli-deploy-plugin');
-const path             = require('path');
-const os               = require('os');
-const username         = require('username');
-const RSVP             = require('rsvp');
-const Rsync            = require('rsync');
-const SSHClient        = require('./lib/ssh-client');
+const BasePlugin = require('ember-cli-deploy-plugin');
+const path       = require('path');
+const os         = require('os');
+const username   = require('username');
+const RSVP       = require('rsvp');
+const Rsync      = require('rsync');
+const SSHClient  = require('./lib/ssh-client');
 
 const defaultConfig = {
   distDir: (context) => context.distDir,
@@ -60,11 +60,12 @@ const defaultConfig = {
   },
 };
 
-class DeployPlugin extends DeployPluginBase {
+class DeployPlugin extends BasePlugin {
   constructor(options) {
     super();
     this.name = options.name;
     this.defaultConfig = defaultConfig;
+    this._rsyncClientClass = Rsync;
     this._sshClient = SSHClient;
   }
 
@@ -82,6 +83,7 @@ class DeployPlugin extends DeployPluginBase {
     };
 
     this._client = new this._sshClient(options);
+    this._rsyncClient = new this._rsyncClientClass();
     return this._client.connect(this);
   }
 
@@ -116,8 +118,7 @@ class DeployPlugin extends DeployPluginBase {
     this.log('Fetching Revisions');
 
     return this._fetchRevisionManifest()
-      .then((manifest) => context.revisions = manifest)
-      .catch((error) => this.log(error, { color: 'red' }));
+      .then((manifest) => context.revisions = manifest);
   }
 
   upload(/*context*/) {
@@ -125,8 +126,7 @@ class DeployPlugin extends DeployPluginBase {
       .then(() => {
         this.log('Successfully uploaded updated manifest.', { verbose: true });
         return this._uploadApplicationFiles();
-      })
-      .catch((error) => this.log(error, { color: 'red' }));
+      });
   }
 
   teardown(/*context*/) {
@@ -143,7 +143,8 @@ class DeployPlugin extends DeployPluginBase {
     this.log('Uploading `applicationFiles` to ' + destination);
 
     return client.exec('mkdir -p ' + destination)
-      .then(() => this._rsync(generatedPath));
+      .then(() => this._rsync(generatedPath))
+      .then(() => this.log('Finished uploading application files!'));
   }
 
   _activateRevisionManifest(/*context*/) {
@@ -165,10 +166,6 @@ class DeployPlugin extends DeployPluginBase {
         let data = new Buffer(JSON.stringify(manifest), 'utf-8');
 
         return client.upload(manifestPath, data, this);
-      })
-      .catch((error) => {
-        this.log(error, { color: 'red' });
-        return error;
       });
   }
 
@@ -193,10 +190,6 @@ class DeployPlugin extends DeployPluginBase {
 
         let data = new Buffer(JSON.stringify(manifest), 'utf-8');
         return client.upload(manifestPath, data);
-      })
-      .catch((error) => {
-        this.log(error.message, { color: 'red' });
-        return error;
       });
   }
 
@@ -215,13 +208,13 @@ class DeployPlugin extends DeployPluginBase {
 
           return RSVP.resolve([ ]);
         } else {
-          this.log(error.message, { color: 'red' });
+          return RSVP.reject(error);
         }
       });
   }
 
   _rsync(destination) {
-    let rsync = new Rsync()
+    let rsync = this._rsyncClient
       .shell('ssh -p ' + this.readConfig('port'))
       .flags(this.readConfig('rsyncFlags'))
       .source(this.readConfig('directory'))
@@ -235,7 +228,14 @@ class DeployPlugin extends DeployPluginBase {
       this.log(rsync.command());
     }
 
-    rsync.execute(() => this.log('Done !'));
+    return new RSVP.Promise((resolve, reject) => {
+      rsync.execute((error/*, code, cmd*/) => {
+        if (error) {
+          reject(error);
+        }
+        return resolve();
+      });
+    });
   }
 }
 
