@@ -163,7 +163,7 @@ class DeployPlugin extends BasePlugin {
           return rev;
         });
 
-        let data = new Buffer(JSON.stringify(manifest), 'utf-8');
+        let data = Buffer.from(JSON.stringify(manifest), 'utf-8');
 
         return client.upload(manifestPath, data, this);
       });
@@ -188,7 +188,7 @@ class DeployPlugin extends BasePlugin {
         this.log('Adding ' + JSON.stringify(revisionMeta), { verbose: true });
         manifest.unshift(revisionMeta);
 
-        let data = new Buffer(JSON.stringify(manifest), 'utf-8');
+        let data = Buffer.from(JSON.stringify(manifest), 'utf-8');
         return client.upload(manifestPath, data);
       });
   }
