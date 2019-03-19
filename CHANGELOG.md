@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.3.0] - 2019-03-18
+- upgrade to latest ember-cli (3.8.1) and upgrade other dependencies
+- display output from rsync command when run with --verbose argument
+
 ## [0.2.0] - 2019-03-18
 - catch errors from "rsync" command instead of carrying on as though nothing went wrong
 - in general, let errors propagate up so they fail the pipeline
