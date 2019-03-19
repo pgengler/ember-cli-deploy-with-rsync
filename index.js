@@ -234,7 +234,7 @@ class DeployPlugin extends BasePlugin {
           reject(error);
         }
         return resolve();
-      });
+      }, (stdout) => this.log(stdout, { verbose: true }), (stderr) => this.log(stderr, { color: 'red', verbose: true }));
     });
   }
 }
