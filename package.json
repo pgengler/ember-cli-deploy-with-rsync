@@ -1,6 +1,6 @@
 {
   "name": "ember-cli-deploy-with-rsync",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "An ember-cli-deploy plugin to upload, activate and list versioned application file/s using SSH and rsync.",
   "keywords": [
     "ember-addon",
@@ -22,9 +22,9 @@
     "ember-cli-babel": "^7.1.2",
     "ember-cli-deploy-plugin": "^0.2.9",
     "node-fs": "^0.1.7",
-    "rsvp": "^4.8.4",
     "rsync": "^0.6.1",
-    "ssh2": "^0.8.2",
+    "ssh2": "^1.16.0",
+    "temp-write": "^4.0.0",
     "untildify": "^3.0.2",
     "username": "^4.1.0"
   },
@@ -55,9 +55,7 @@
     "glob": "^7.1.1",
     "loader.js": "^4.7.0",
     "mocha": "^6.0.2",
-    "mocha-eslint": "^5.0.0",
-    "multiline": "^2.0.0",
-    "qunit-dom": "^0.8.0"
+    "mocha-eslint": "^5.0.0"
   },
   "engines": {
     "node": "6.* || 8.* || >= 10.*"
