@@ -173,7 +173,6 @@ class DeployPlugin extends BasePlugin {
     this.log('Updating `revisionManifest` ' + manifestPath, { verbose: true });
 
     const manifest = await this._fetchRevisionManifest();
-    this.log('manifest: ' + JSON.stringify(manifest));
     let existing = manifest.some((rev) => rev.revision === revisionKey);
 
     if (existing) {
