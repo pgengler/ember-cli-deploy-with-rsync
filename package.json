@@ -55,9 +55,7 @@
     "glob": "^7.1.1",
     "loader.js": "^4.7.0",
     "mocha": "^6.0.2",
-    "mocha-eslint": "^5.0.0",
-    "multiline": "^2.0.0",
-    "qunit-dom": "^0.8.0"
+    "mocha-eslint": "^5.0.0"
   },
   "engines": {
     "node": "6.* || 8.* || >= 10.*"
