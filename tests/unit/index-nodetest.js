@@ -4,7 +4,6 @@
 const fs   = require('node-fs');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
-const RSVP = require('rsvp');
 
 chai.use(chaiAsPromised);
 const assert = chai.assert;
@@ -17,36 +16,36 @@ class MockSSHClient {
 
   connect() {
     this._connected = true;
-    return RSVP.resolve();
+    return Promise.resolve();
   }
 
   readFile(path) {
     if (this._readFileError) {
-      return RSVP.reject(this._readFileError);
+      return Promise.reject(this._readFileError);
     } else {
       let file = this._uploadedFiles[path];
       if (file) {
-        return RSVP.resolve(file);
+        return Promise.resolve(file);
       } else {
-        return RSVP.reject(new Error('No such file'));
+        return Promise.reject(new Error('No such file'));
       }
     }
   }
 
   upload(path, data) {
     this._uploadedFiles[path] = data.toString();
-    return RSVP.resolve();
+    return Promise.resolve();
   }
 
   putFile(src, dest) {
     let file = fs.readFileSync(src, 'utc8');
     this._uploadedFiles[dest] = file.toString();
-    return RSVP.resolve();
+    return Promise.resolve();
   }
 
   exec(command) {
     this._command = command;
-    return RSVP.resolve();
+    return Promise.resolve();
   }
 }
 
@@ -235,7 +234,7 @@ describe('the deploy plugin object', function() {
       files[manifestPath] = JSON.stringify(revisions);
 
       client._uploadedFiles = files;
-      plugin._uploadApplicationFiles = RSVP.resolve;
+      plugin._uploadApplicationFiles = () => Promise.resolve();
 
       let uploading = plugin.upload(context);
 
@@ -247,7 +246,7 @@ describe('the deploy plugin object', function() {
     });
 
     it('returns a rejected promise when rsync fails', function() {
-      plugin._rsync = RSVP.reject();
+      plugin._rsync = () => Promise.reject();
       let uploading = plugin.upload();
 
       return assert.isRejected(uploading);

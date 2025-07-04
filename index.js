@@ -5,7 +5,6 @@ const BasePlugin = require('ember-cli-deploy-plugin');
 const path       = require('path');
 const os         = require('os');
 const username   = require('username');
-const RSVP       = require('rsvp');
 const Rsync      = require('rsync');
 const SSHClient  = require('./lib/ssh-client');
 
@@ -206,9 +205,9 @@ class DeployPlugin extends BasePlugin {
         if (error.message === 'No such file') {
           this.log('Revision manifest not present building new one.', { verbose: true });
 
-          return RSVP.resolve([ ]);
+          return Promise.resolve([ ]);
         } else {
-          return RSVP.reject(error);
+          return Promise.reject(error);
         }
       });
   }
@@ -228,7 +227,7 @@ class DeployPlugin extends BasePlugin {
       this.log(rsync.command());
     }
 
-    return new RSVP.Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       rsync.execute((error/*, code, cmd*/) => {
         if (error) {
           reject(error);
